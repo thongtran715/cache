@@ -1,4 +1,4 @@
-package com.cach;
+package com.cache;
 
 import lombok.Getter;
 import lombok.Setter;

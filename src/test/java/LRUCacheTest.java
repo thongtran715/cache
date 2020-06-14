@@ -1,6 +1,5 @@
-import com.cach.LRUCache;
-import com.cach.Pair;
-import java.util.Arrays;
+import com.cache.LRUCache;
+import com.cache.Pair;
 import java.util.List;
 import org.junit.Assert;
 import org.junit.Before;

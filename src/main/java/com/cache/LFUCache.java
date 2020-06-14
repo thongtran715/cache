@@ -1,8 +1,7 @@
-package com.cach;
+package com.cache;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import lombok.NonNull;
 
 public class LFUCache<K, V> {
 

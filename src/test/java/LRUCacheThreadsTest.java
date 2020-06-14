@@ -1,5 +1,4 @@
-import com.cach.LRUCache;
-import java.util.Arrays;
+import com.cache.LRUCache;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -13,8 +12,9 @@ public class LRUCacheThreadsTest {
   }
 
   /**
-   * An implementation to check if 1000 threads update the same key
-   * A synchronization locks should prevent the race condition in the cache
+   * An implementation to check if 1000 threads update the same key A synchronization locks should
+   * prevent the race condition in the cache
+   *
    * @throws InterruptedException
    */
   @Test
@@ -63,5 +63,28 @@ public class LRUCacheThreadsTest {
       thread[i].join();
     }
     Assert.assertEquals(1_000_000, lruCache.size());
+  }
+
+  @Test
+  public void testCacheEvictionWhenMultiThread() throws InterruptedException {
+    int size = 1000;
+
+    Runnable evictTask =
+        () -> {
+          lruCache.set("Something", 2);
+          lruCache.evict("Something");
+        };
+
+    Thread[] thread = new Thread[size];
+    for (int i = 0; i < size; ++i) {
+      thread[i] = new Thread(evictTask);
+      thread[i].start();
+    }
+
+    for (int i = 0; i < size; ++i) {
+      thread[i].join();
+    }
+
+    Assert.assertNull(lruCache.get("Something"));
   }
 }

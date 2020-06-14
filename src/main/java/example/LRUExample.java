@@ -1,6 +1,6 @@
 package example;
 
-import com.cach.LRUCache;
+import com.cache.LRUCache;
 import java.util.Arrays;
 
 public class LRUExample {

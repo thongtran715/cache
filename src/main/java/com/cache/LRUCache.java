@@ -1,6 +1,8 @@
-package com.cach;
+package com.cache;
 
-import static com.base.Preconditions.*;
+import static com.base.Preconditions.checkArgument;
+import static com.base.Unset.UNSET_VALUE;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -23,7 +25,7 @@ public class LRUCache<K, V> {
   /** Maximum number of items */
   private Long maxItems = 100L;
   /** Default age for all item in the cache */
-  private long age = -1;
+  private long age = UNSET_VALUE;
 
   /** Update expiration on item when using get method */
   private boolean updateAgeOnGet = false;
@@ -68,7 +70,7 @@ public class LRUCache<K, V> {
   }
 
   private static class LRUImpl implements MaxItemStep, AgeSteps, FinalStep, UpdateAgeStep {
-    private long maxAge = -1;
+    private long maxAge = UNSET_VALUE;
     private long maxItems;
     private boolean updateAge = false;
 
@@ -118,7 +120,7 @@ public class LRUCache<K, V> {
 
     public Node(long age, K key, V value) {
       this(key, value);
-      if (age != -1) {
+      if (age != UNSET_VALUE) {
         date = new Date();
         this.age = age;
       }
@@ -330,6 +332,7 @@ public class LRUCache<K, V> {
   }
 
   /** Evict the key */
+  @Synchronized
   public V evict(K key) {
     if (!cacheMap.containsKey(key)) {
       return null;
