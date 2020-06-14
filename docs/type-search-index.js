@@ -1,0 +1,1 @@
+typeSearchIndex = [{"p":"com.cach","l":"LRU.AgeSteps"},{"l":"All Classes","url":"allclasses-index.html"},{"p":"com.cach","l":"LRU.FinalStep"},{"p":"com.cach","l":"LRU"},{"p":"example","l":"LRUExample"},{"p":"com.cach","l":"LRU.MaxItemStep"},{"p":"com.cach","l":"Pair"},{"p":"com.cach","l":"LRU.UpdateAgeStep"}]

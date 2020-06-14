@@ -1,34 +1,47 @@
 package com.cach;
 
+import static com.base.Preconditions.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import lombok.NonNull;
+import lombok.Synchronized;
 
-public class LRU<K, V> {
+/**
+ * Least Recently Used Cache
+ *
+ * @param <K>
+ * @param <V>
+ */
+public class LRUCache<K, V> {
 
   /** Maximum number of items */
   private Long maxItems = 100L;
   /** Default age for all item in the cache */
-  private Long age;
+  private long age = -1;
 
   /** Update expiration on item when using get method */
   private boolean updateAgeOnGet = false;
 
   /** Map holding Key Value Pair */
-  private HashMap<K, V> map = new HashMap<>();
+  private Map<K, V> map = new ConcurrentHashMap<>();
 
   /** Map holding Key and Node pair */
-  private HashMap<K, Node> cacheMap = new HashMap<K, Node>();
+  private Map<K, Node> cacheMap = new ConcurrentHashMap<K, Node>();
 
   /** Double Linked List */
   private DoubleLinkedList dll = new DoubleLinkedList();
 
+  /** Cache statistic */
+  private CacheStats cacheStats;
+
   /** Step Builder */
-  private LRU() {}
+  private LRUCache() {}
 
   public static MaxItemStep newBuilder() {
     return new LRUImpl();
@@ -41,54 +54,57 @@ public class LRU<K, V> {
   public interface AgeSteps {
     UpdateAgeStep age(long age);
 
-    LRU build();
+    LRUCache build();
   }
 
   public interface UpdateAgeStep {
-    FinalStep updateAgeOnGet(boolean update);
+    FinalStep refreshExpireAfterGet(boolean update);
 
-    LRU build();
+    LRUCache build();
   }
 
   public interface FinalStep {
-    LRU build();
+    LRUCache build();
   }
 
   private static class LRUImpl implements MaxItemStep, AgeSteps, FinalStep, UpdateAgeStep {
-    private Long maxAge;
+    private long maxAge = -1;
     private long maxItems;
     private boolean updateAge = false;
 
     @Override
     public AgeSteps maxItems(long maxItems) {
+      checkArgument(maxItems >= 0);
       this.maxItems = maxItems;
       return this;
     }
 
     @Override
-    public FinalStep updateAgeOnGet(boolean update) {
+    public FinalStep refreshExpireAfterGet(boolean update) {
       this.updateAge = update;
       return this;
     }
 
     @Override
     public UpdateAgeStep age(long age) {
+      checkArgument(age >= 0);
       this.maxAge = age;
       return this;
     }
 
     @Override
-    public LRU build() {
-      LRU lru = new LRU();
-      lru.age = this.maxAge;
-      lru.maxItems = this.maxItems;
-      lru.updateAgeOnGet = this.updateAge;
-      return lru;
+    public LRUCache build() {
+      LRUCache lruCache = new LRUCache();
+      lruCache.age = this.maxAge;
+      lruCache.maxItems = this.maxItems;
+      lruCache.updateAgeOnGet = this.updateAge;
+      lruCache.cacheStats = new CacheStats();
+      return lruCache;
     }
   }
 
   private class Node {
-    public Long age;
+    public long age;
     public V value;
     public K key;
     public Node next;
@@ -100,9 +116,9 @@ public class LRU<K, V> {
       this.value = value;
     }
 
-    public Node(Long age, K key, V value) {
+    public Node(long age, K key, V value) {
       this(key, value);
-      if (age != null) {
+      if (age != -1) {
         date = new Date();
         this.age = age;
       }
@@ -112,16 +128,22 @@ public class LRU<K, V> {
   private class DoubleLinkedList {
     private Node head;
     private Node tail;
+    private long size;
+
+    public DoubleLinkedList() {
+      /** Dummy head and tail */
+      head = new Node(null, null);
+      tail = new Node(null, null);
+      head.next = tail;
+      tail.prev = head;
+    }
 
     private Node addFirst(Node node) {
-      if (head == null) {
-        head = node;
-        tail = head;
-      } else {
-        node.next = head;
-        head.prev = node;
-        head = node;
-      }
+      node.next = head.next;
+      head.next.prev = node;
+      head.next = node;
+      node.prev = head;
+      size++;
       return head;
     }
 
@@ -134,57 +156,44 @@ public class LRU<K, V> {
       return node;
     }
 
-    private Node removeHelper(Node toDelete) {
-      if (toDelete == tail) {
+    private Node removeHelper(Node node) {
+      Node prev = node.prev;
+      Node next = node.next;
+      prev.next = next;
+      next.prev = prev;
+      return node;
+    }
+
+    public Node removeNode(Node node) {
+      if (size > 0) {
+        size--;
+        return removeHelper(node);
+      }
+      return null;
+    }
+
+    public Node removeLeastNode() {
+      if (size > 0) {
+        --size;
+        Node node = tail;
         Node prev = tail.prev;
         prev.next = null;
         tail.prev = null;
         tail = prev;
-        return toDelete;
+        return node;
+      } else {
+        return null;
       }
-      Node prev = toDelete.prev;
-      Node next = toDelete.next;
-      prev.next = next;
-      next.prev = prev;
-      toDelete.next = null;
-      toDelete.prev = null;
-      return toDelete;
-    }
-
-    public Node removeNode(Node node) {
-      if (head == null) {
-        throw new NullPointerException("Cache is empty");
-      }
-      if (head == node) {
-        Node aNode = head.next;
-        head.next = null;
-        if (aNode != null) {
-          aNode.prev = null;
-          head = aNode;
-        }
-        return head;
-      }
-      return removeHelper(node);
-    }
-
-    public Node removeLeastNode() {
-      if (head == null) {
-        throw new NullPointerException("Cache is empty");
-      }
-      Node node = tail;
-      Node prev = tail.prev;
-      prev.next = null;
-      tail.prev = null;
-      tail = prev;
-      return node;
     }
   }
 
-  public void set(K key, V value) {
+  @Synchronized
+  public void set(@NonNull K key, @NonNull V value) {
     set(key, value, this.age);
   }
 
-  public void set(K key, V value, long age) {
+  @Synchronized
+  public void set(@NonNull K key, @NonNull V value, long age) {
     if (!cacheMap.containsKey(key)) {
       // Check if size is still available
       if (maxItems == 0) {
@@ -215,47 +224,56 @@ public class LRU<K, V> {
     return currentDate.getTime() - date.getTime() >= age;
   }
 
-  public V get(K key) throws Exception {
+  @Synchronized
+  public V get(@NonNull K key) {
     if (!cacheMap.containsKey(key)) {
-      throw new Exception("Item not found");
+      cacheStats.incrementMiss();
+      return null;
     }
     Node aNode = cacheMap.get(key);
 
     // Check if the node is not expire
-    if (aNode.age != null) {
+    if (aNode.age != -1) {
       if (isExpire(aNode)) {
         inValidate(aNode.key);
-        throw new Exception("Item is expired, therefore have been removed");
+        cacheStats.incrementEviction();
+        return null;
       } else {
         if (this.updateAgeOnGet) {
           aNode.date = new Date();
         }
       }
     }
+    cacheStats.incrementHit();
     dll.getNode(aNode);
     return aNode.value;
   }
 
+  @Synchronized
   public boolean isEmpty() {
     flushAllExpireItems();
     return cacheMap.isEmpty();
   }
 
-  public long length() {
+  @Synchronized
+  public long size() {
     flushAllExpireItems();
     return cacheMap.size();
   }
 
+  @Synchronized
   public Set<K> keySet() {
     flushAllExpireItems();
     return map.keySet();
   }
 
+  @Synchronized
   public Collection<V> values() {
     flushAllExpireItems();
     return map.values();
   }
 
+  @Synchronized
   public List<Pair<K, V>> toList() {
     flushAllExpireItems();
     List<Pair<K, V>> list = new ArrayList<>();
@@ -267,14 +285,14 @@ public class LRU<K, V> {
     return list;
   }
 
-  public List<Pair<K, V>> topKFrequentItems(long k) {
-    if (k > length()) {
-      throw new RuntimeException("K is not valid");
-    }
+  @Synchronized
+  public List<Pair<K, V>> topKRecentItems(long k) {
+    checkArgument(k < size(), "K can't be greater than number of available items");
+    checkArgument(k > 0, "K can't be negative");
     List<Pair<K, V>> list = new ArrayList<>();
-    Node curr = this.dll.head;
-    while (curr != null && k != 0){
-      list.add(new Pair(curr.key, curr.value)) ;
+    Node curr = this.dll.head.next;
+    while (curr != null && k != 0) {
+      list.add(new Pair(curr.key, curr.value));
       k--;
       curr = curr.next;
     }
@@ -285,7 +303,7 @@ public class LRU<K, V> {
    * @param key - Key in the cache to invalidate
    * @return true/false if invalidate successfully
    */
-  public boolean inValidate(K key) {
+  public boolean inValidate(@NonNull K key) {
     if (!cacheMap.containsKey(key)) {
       return false;
     } else {
@@ -305,5 +323,21 @@ public class LRU<K, V> {
         inValidate(key);
       }
     }
+  }
+
+  public CacheStats getCacheStats() {
+    return this.cacheStats;
+  }
+
+  /** Evict the key */
+  public V evict(K key) {
+    if (!cacheMap.containsKey(key)) {
+      return null;
+    }
+    Node node = cacheMap.get(key);
+    cacheMap.remove(key);
+    map.remove(key);
+    dll.removeNode(node);
+    return node.value;
   }
 }

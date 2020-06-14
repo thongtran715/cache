@@ -1,15 +1,32 @@
 package example;
 
-import com.cach.LRU;
+import com.cach.LRUCache;
+import java.util.Arrays;
 
 public class LRUExample {
-  public static void main(String[] args) throws Exception {
-    LRU<String, Integer> lru = LRU.newBuilder().maxItems(2).age(33).updateAgeOnGet(false).build();
-    lru.set("Hello3", 10, 33);
-    System.out.println(lru.get("Hello3"));
-    Thread.sleep(30);
-    System.out.println(lru.get("Hello3"));
-    Thread.sleep(30);
-    System.out.println(lru.get("Hello3"));
+  public static void main(String[] args) throws InterruptedException {
+    LRUCache<String, Integer> lruCache =
+        LRUCache.newBuilder().maxItems(2).age(33).refreshExpireAfterGet(false).build();
+
+    String[][] dataSource = {
+      {"K", "V"},
+      {"K1", "V1"},
+      {"K2", "V2"},
+      {"K3", "V3"},
+      {"K4", "V4"},
+      {"K5", "V5"},
+      {"K6", "V6"},
+      {"K7", "V7"},
+      {"K8", "V8"},
+    };
+
+    Runnable addTask =
+        () -> {
+          Arrays.stream(dataSource).forEach((pair) -> System.out.println(pair[0]));
+        };
+
+    Thread thread = new Thread(addTask);
+    thread.start();
+    thread.join();
   }
 }
