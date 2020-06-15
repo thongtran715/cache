@@ -1,16 +1,12 @@
 package com.cache;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
+import lombok.NonNull;
 
-@Setter
-@Getter
+@Data
 public class Pair<K, V> {
+  @NonNull
   private K key;
+  @NonNull
   private V value;
-
-  public Pair(K key, V value) {
-    this.key = key;
-    this.value = value;
-  }
 }
