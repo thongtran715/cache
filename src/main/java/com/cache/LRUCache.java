@@ -17,8 +17,8 @@ import lombok.Synchronized;
 /**
  * Least Recently Used Cache
  *
- * @param <K>
- * @param <V>
+ * @param <K> Generic Type
+ * @param <V> Generic Type
  */
 public class LRUCache<K, V> {
 
@@ -314,7 +314,11 @@ public class LRUCache<K, V> {
     return this.cacheStats;
   }
 
-  /** Evict the key */
+  /**
+   * Evict the key
+   * @param key A key which was set in the cache
+   * @return Value of the Key which was set in the cache
+   */
   @Synchronized
   public V evict(K key) {
     if (!cacheMap.containsKey(key)) {

@@ -42,7 +42,7 @@ public class LRUCacheThreadsTest {
 
   @Test
   public void testCacheWhenMultiThreadWithDifferentKeys() throws InterruptedException {
-    int size = 1000;
+    int size = 30;
     Runnable addTask =
         () -> {
           String threadName = Thread.currentThread().getName();
@@ -62,12 +62,12 @@ public class LRUCacheThreadsTest {
     for (int i = 0; i < size; ++i) {
       thread[i].join();
     }
-    Assert.assertEquals(1_000_000, lruCache.size());
+    Assert.assertEquals(900, lruCache.size());
   }
 
   @Test
   public void testCacheEvictionWhenMultiThread() throws InterruptedException {
-    int size = 1000;
+    int size = 30;
 
     Runnable evictTask =
         () -> {
