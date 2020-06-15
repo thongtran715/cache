@@ -237,7 +237,7 @@ public class LRUCache<K, V> {
     // Check if the node is not expire
     if (aNode.age != -1) {
       if (isExpire(aNode)) {
-        inValidate(aNode.key);
+        evict(aNode.key);
         cacheStats.incrementEviction();
         return null;
       } else {
@@ -301,28 +301,11 @@ public class LRUCache<K, V> {
     return list;
   }
 
-  /**
-   * @param key - Key in the cache to invalidate
-   * @return true/false if invalidate successfully
-   */
-  public boolean inValidate(@NonNull K key) {
-    if (!cacheMap.containsKey(key)) {
-      return false;
-    } else {
-      Node aNode = cacheMap.get(key);
-      cacheMap.remove(key);
-      map.remove(key);
-      dll.removeNode(aNode);
-      --maxItems;
-      return true;
-    }
-  }
-
   private void flushAllExpireItems() {
     for (K key : cacheMap.keySet()) {
       Node aNode = cacheMap.get(key);
       if (isExpire(aNode)) {
-        inValidate(key);
+        evict(key);
       }
     }
   }
